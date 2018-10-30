@@ -40,7 +40,11 @@ sub init()
 end sub
 ```
 
+### Global Reference
 
+Globally referencing the Taplytics SDK can be acheived by using a global data scoping. The implementation of this depends on the setup of your Roku channel. See the following for more information:
+
+https://sdkdocs.roku.com/display/sdkdoc/SceneGraph+Data+Scoping
 
 
 ## Running Experiment Information
