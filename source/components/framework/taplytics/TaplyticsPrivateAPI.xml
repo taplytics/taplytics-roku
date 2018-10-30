@@ -1,0 +1,14 @@
+<component name="TaplyticsPrivateAPI" extends="Task">
+    <interface>
+        <field id="key" type="string" alwaysNotify="true"/>
+        <field id="enablePrint" type="boolean" alwaysNotify="true" value="false"/>
+        <field id="HTTP_RETRIES" type="integer" alwaysNotify="true" value="5"/>
+
+        <field id="clientConfig" type="assocarray" alwaysNotify="true"/>
+        <field id="startTaplytics" type="assocarray" alwaysNotify="true"/>
+        <field id="setUserAttributes" type="assocarray" alwaysNotify="true"/>
+        <field id="logEvent" type="assocarray" alwaysNotify="true"/>
+        <field id="resetAppUser" type="boolean" alwaysNotify="true"/>
+    </interface>
+    <script type="text/brightscript" uri="./TaplyticsPrivateAPI.brs"/>
+</component>

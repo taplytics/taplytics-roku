@@ -1,0 +1,26 @@
+<component name="TaplyticsAPI" extends="Node">
+
+    <interface>
+      <field id="key" alias="TaplyticsPrivateAPI.key" type="String" alwaysNotify="true"/>
+      <field id="enablePrint" alias="TaplyticsPrivateAPI.enablePrint" type="boolean" alwaysNotify="true"/>
+      <field id="HTTP_RETRIES" alias="TaplyticsPrivateAPI.HTTP_RETRIES" type="integer" alwaysNotify="true"/>
+
+      <function name="getRunningExperimentsAndVariations"/>
+      <function name="getValueForVariable"/>
+      <function name="getVariationForExperiment"/>
+      <function name="logEvent"/>
+      <function name="resetAppUser"/>
+      <function name="setUserAttributes"/>
+      <function name="startNewSession"/>
+      <function name="startTaplytics"/>
+
+    </interface>
+
+    <children>
+      <TaplyticsPrivateAPI
+        id="TaplyticsPrivateAPI"
+        key="90391ad033b0ffa48e36f0b4d5bacbe552b6f834"/>
+    </children>
+
+    <script type="text/brightscript" uri="./TaplyticsAPI.brs"/>
+</component>

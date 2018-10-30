@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--********** Copyright 2016 Roku Corp.  All Rights Reserved. **********-->
+
+<!-- main node which handles home screen children -->
+<component name="HomeScene" extends="Scene"  xsi:noNamespaceSchemaLocation="https://devtools.web.roku.com/schema/RokuSceneGraph.xsd">
+
+    <interface>
+    </interface>
+
+    <children>
+
+      <TaplyticsAPI
+          id="TaplyticsAPI"
+          key="90391ad033b0ffa48e36f0b4d5bacbe552b6f834"
+          enablePrint="true"
+          HTTP_RETRIES="5"/>
+
+    </children>
+</component>
