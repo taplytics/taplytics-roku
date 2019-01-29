@@ -1,5 +1,5 @@
 function init()
-  m.TAP_SDK_VERSION = "0.0"
+  m.TAP_SDK_VERSION = "1.0.1"
   m.top.id = "tap"
 
   m.messagePort = _createPort()
@@ -126,7 +126,7 @@ end function
 function Taplytics() as Object
   prototype = {}
 
-  prototype.TAP_SDK_VERSION = "0.0"
+  prototype.TAP_SDK_VERSION = "1.0.1"
   prototype.PLAYER_SOFTWARE_NAME = "RokuSG"
   prototype.TAP_API_VERSION = "2.0"
   prototype.PLAYER_IS_FULLSCREEN = "true"
