@@ -1,5 +1,5 @@
 function init()
-  m.TAP_SDK_VERSION = "1.0.1"
+  m.TAP_SDK_VERSION = "1.1.0"
   m.top.id = "tap"
 
   m.messagePort = _createPort()
@@ -126,7 +126,7 @@ end function
 function Taplytics() as Object
   prototype = {}
 
-  prototype.TAP_SDK_VERSION = "1.0.1"
+  prototype.TAP_SDK_VERSION = "1.1.0"
   prototype.PLAYER_SOFTWARE_NAME = "RokuSG"
   prototype.TAP_API_VERSION = "2.0"
   prototype.PLAYER_IS_FULLSCREEN = "true"
@@ -194,7 +194,7 @@ function Taplytics() as Object
 
   prototype.logEvent = function(data as Object)
     if m._top.enablePrint then print "ENTER logEvent>>>"
-    m._postClientEvents(data)
+    m._postClientEvents("goalAchieved", data)
   end function
 
   prototype.resetAppUser = function()
@@ -384,18 +384,18 @@ function Taplytics() as Object
 
   end function
 
-  prototype._postClientEvents = function(queryParameters as Object)
+  prototype._postClientEvents = function(eventType as Object, queryParameters as Object)
 
     '   t - Taplytics API Key ● API Key
     '   sid - Session_id
     '   e - Array of events
-    '     type - type of the event (String)
-    '     gn - goal name (String)
-    '     date - current date (Date)
-    '     val - numerical value (Double)
-    '     data - metaData (JSON Object)
-    '     prod - is prod, not live update (Boolean)
-    '     sid - session_id (String)
+    '   type - type of the event (String)
+    '   gn - goal name (String)
+    '   date - current date (Date)
+    '   val - numerical value (Double)
+    '   data - metaData (JSON Object)
+    '   prod - is prod, not live update (Boolean)
+    '   sid - session_id (String)
 
     requiredParamaters = {}
 
@@ -407,7 +407,10 @@ function Taplytics() as Object
 
     'create event
     event = {}
-    event.type = "goalAchieved"
+    
+    event.type = eventType
+    print "event type: ", event.type
+
     if queryParameters.DoesExist("eventName") and queryParameters.eventName <> ""
       event.gn = queryParameters.eventName
     end if
@@ -488,6 +491,9 @@ function Taplytics() as Object
       m._top.clientConfig = m._variables
       if m._top.enablePrint then print m._variables
       m._clientConfigReady = true
+
+      m._postClientEvents("appActive", {})
+
     end if
   end function
 

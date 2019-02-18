@@ -37,9 +37,8 @@ function getValueForVariable(params as Object) as Object
   if m.top.enablePrint then print "Variable name --> ",params.name
   if m.top.enablePrint then print "Default value --> ",params.default
 
-  value = "NOTREADY"
+  value = params.default
   if m._clientConfigReady
-    value = params.default
     if m._clientConfig.DoesExist(params.name) then value = m._clientConfig[params.name]
   end if
   return value
