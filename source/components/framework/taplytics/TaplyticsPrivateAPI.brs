@@ -1,5 +1,5 @@
 function init()
-  m.TAP_SDK_VERSION = "1.1.0"
+  m.TAP_SDK_VERSION = "1.2.0"
   m.top.id = "tap"
 
   m.messagePort = _createPort()
@@ -126,7 +126,7 @@ end function
 function Taplytics() as Object
   prototype = {}
 
-  prototype.TAP_SDK_VERSION = "1.1.0"
+  prototype.TAP_SDK_VERSION = "1.2.0"
   prototype.PLAYER_SOFTWARE_NAME = "RokuSG"
   prototype.TAP_API_VERSION = "2.0"
   prototype.PLAYER_IS_FULLSCREEN = "true"
@@ -237,11 +237,11 @@ function Taplytics() as Object
     'dev - live update manually set (from starting options) / 1/0
     if m._sessionProperties.is_dev
       requiredParamaters.rm = 1
-      requiredParamaters.lv = 0
+      requiredParamaters.lv = 1
       requiredParamaters.dev = 1
     else
       requiredParamaters.rm = 3
-      requiredParamaters.lv = 1
+      requiredParamaters.lv = 0
       requiredParamaters.dev = 0
     end if
 
