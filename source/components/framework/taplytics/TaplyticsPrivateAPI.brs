@@ -237,11 +237,11 @@ function Taplytics() as Object
     'dev - live update manually set (from starting options) / 1/0
     if m._sessionProperties.is_dev
       requiredParamaters.rm = 1
-      requiredParamaters.lv = 0
+      requiredParamaters.lv = 1
       requiredParamaters.dev = 1
     else
       requiredParamaters.rm = 3
-      requiredParamaters.lv = 1
+      requiredParamaters.lv = 0
       requiredParamaters.dev = 0
     end if
 
