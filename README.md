@@ -1,6 +1,6 @@
 # Taplytics Roku SDK
 
-An SDK for A/B Testing and analytics on Roku Channels
+An SDK for A/B Testing, Analytics, and Feature Flags on Roku Channels
 
 | Quick Access |
 | ----------------- |
