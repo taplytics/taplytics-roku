@@ -4,12 +4,16 @@
       <field id="key" alias="TaplyticsPrivateAPI.key" type="String" alwaysNotify="true"/>
       <field id="enablePrint" alias="TaplyticsPrivateAPI.enablePrint" type="boolean" alwaysNotify="true"/>
       <field id="HTTP_RETRIES" alias="TaplyticsPrivateAPI.HTTP_RETRIES" type="integer" alwaysNotify="true"/>
+      <field id="ready" type="boolean" alwaysNotify="true" value="false"/>
 
+      <function name="getFeatureFlagEnabled"/>
       <function name="getRunningExperimentsAndVariations"/>
+      <function name="getRunningFeatureFlags"/>
+      <function name="getSessionInfo"/>
       <function name="getValueForVariable"/>
       <function name="getVariationForExperiment"/>
       <function name="logEvent"/>
-      <function name="resetAppUser"/>
+      <function name="resetUser"/>
       <function name="setUserAttributes"/>
       <function name="startNewSession"/>
       <function name="startTaplytics"/>

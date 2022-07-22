@@ -7,7 +7,7 @@ function init()
   m.top.observeField("startTaplytics", m.messagePort)
   m.top.observeField("setUserAttributes", m.messagePort)
   m.top.observeField("logEvent", m.messagePort)
-  m.top.observeField("resetAppUser", m.messagePort)
+  m.top.observeField("resetUser", m.messagePort)
 
   m.taplytics = Taplytics()
   m.top.functionName = "runLoop"
@@ -54,28 +54,8 @@ function runLoop()
     if msg <> Invalid
       msgType = type(msg)
       if msgType = "roSGNodeEvent"
-        field = msg.getField()
-        data = msg.getData()
-
-        if field = "startTaplytics"
-          m.taplytics.startTaplytics(data)
-        else if field = "setUserAttributes"
-          m.taplytics.setUserAttributes(data)
-        else if field = "logEvent"
-          m.taplytics.logEvent(data)
-        else if field = "resetAppUser"
-          m.taplytics.resetAppUser()
-        else if field = "response"
-          if data.name = "clientConfig"
-            m.taplytics._onGetClientConfig(data)
-          else if data.name = "clientAppUser"
-            m.taplytics._onPostClientAppUser(data)
-          else if data.name = "clientEvents"
-            m.taplytics._onPostClientEvents(data)
-          else if data.name = "resetAppUser"
-            m.taplytics._onPostResetAppUser(data)
-          end if
-        end if
+        m.taplytics.addNodeEvent(msg)
+        m.taplytics.processNodeEventQueue()
       end if
     end if
   end while
@@ -83,7 +63,7 @@ function runLoop()
   m.top.UnobserveField("startTaplytics")
   m.top.UnobserveField("setUserAttributes")
   m.top.UnobserveField("logEvent")
-  m.top.UnobserveField("resetAppUser")
+  m.top.UnobserveField("resetUser")
 
   return true
 end function
@@ -126,19 +106,22 @@ end function
 function Taplytics() as Object
   prototype = {}
 
-  prototype.TAP_SDK_VERSION = "1.2.0"
+  prototype.TAP_SDK_VERSION = "1.3.0"
   prototype.PLAYER_SOFTWARE_NAME = "RokuSG"
   prototype.TAP_API_VERSION = "2.0"
   prototype.PLAYER_IS_FULLSCREEN = "true"
   prototype.KEY = ""
 
   prototype._top = m.top
+  prototype._global = m.global
 
   prototype.httpPort = invalid
   prototype.connection = invalid
+  prototype.nodeEventQueue = []
   prototype._clientConfig = invalid
   prototype._variables = {}
   prototype._clientConfigReady = false
+  prototype._taplyticsActive = false
 
   prototype.init = function(appInfo as Object, systemConfig as Object, key as String, customerConfig as Object, hbt as Object, pp as Object)
     m.httpRetries = 5
@@ -168,42 +151,90 @@ function Taplytics() as Object
   end function
 
 
+  prototype.addNodeEvent = function(msg)
+    if msg <> invalid and type(msg) = "roSGNodeEvent"
+      m.nodeEventQueue.push(msg)
+    end if
+  end function
+
+  prototype.processNodeEventQueue = function()
+    if m.nodeEventQueue <> invalid and m.nodeEventQueue.count() > 0
+      msg = m.nodeEventQueue.shift()
+
+      if msg <> invalid and type(msg) = "roSGNodeEvent"
+        field = msg.getField()
+        data = msg.getData()
+
+        if field = "startTaplytics"
+          m.startTaplytics(data)
+        else if field = "setUserAttributes"
+          m.setUserAttributes(data)
+        else if field = "logEvent"
+          m.logEvent(data)
+        else if field = "resetUser"
+          m.resetUser()
+        else if field = "response"
+          if data.name = "clientConfig"
+            m._onGetClientConfig(data)
+          else if data.name = "clientAppUser"
+            m._onPostClientAppUser(data)
+          else if data.name = "clientEvents"
+            m._onPostClientEvents(data)
+          else if data.name = "resetAppUser"
+            m._onPostResetAppUser(data)
+          end if
+        end if
+      end if
+    end if
+  end function
 
 
 
   ' ' //////////////////////////////////////////////////////////////
   ' ' PUBLIC APIs
   ' ' //////////////////////////////////////////////////////////////
-  '  1. startTaplytics
-  '  2. getRunningExperimentsAndVariations
-  '  3. getVariationForExperiment
-  '  4. getValueForVariable
-  '  5. logEvent
-  '  6. setUserAttributes
-  '  7. resetAppUser
-  '  8. startNewSession
+  '  01. startTaplytics
+  '  02. getRunningExperimentsAndVariations
+  '  03. getVariationForExperiment
+  '  04. getValueForVariable
+  '  05. getRunningFeatureFlags
+  '  06. getFeatureFlagEnabled
+  '  07. logEvent
+  '  08. resetUser
+  '  09. setUserAttributes
+  '  10. startNewSession
+  '  11. getSessionInfo
   prototype.startTaplytics = function(data as Object)
-    if m._top.enablePrint then print "ENTER startTaplytics>>>"
+    if m._top.enablePrint then print "[Taplytics priv] ENTER startTaplytics>>>"
     m._getClientConfig(data)
   end function
 
   prototype.setUserAttributes = function(data as Object)
-    if m._top.enablePrint then print "ENTER setUserAttributes>>>"
+    if m._top.enablePrint then print "[Taplytics priv] ENTER setUserAttributes>>>"
+    if not m._taplyticsActive
+      if m._top.enablePrint then print "[Taplytics priv] Taplytics not active, not sending"
+      return invalid
+    end if
     m._postClientAppUser(data)
   end function
 
   prototype.logEvent = function(data as Object)
-    if m._top.enablePrint then print "ENTER logEvent>>>"
+    if m._top.enablePrint then print "[Taplytics priv] ENTER logEvent>>>"
+    if not m._taplyticsActive
+      if m._top.enablePrint then print "[Taplytics priv] Taplytics not active, not sending"
+      return invalid
+    end if
     m._postClientEvents("goalAchieved", data)
   end function
 
   prototype.resetAppUser = function()
-    if m._top.enablePrint then print "ENTER resetAppUser"
+    if m._top.enablePrint then print "[Taplytics priv] ENTER resetAppUser"
+    if not m._taplyticsActive
+      if m._top.enablePrint then print "[Taplytics priv] Taplytics not active, not sending"
+      return invalid
+    end if
     m._postResetAppUser()
   end function
-
-
-
 
 
   ' ' //////////////////////////////////////////////////////////////
@@ -212,23 +243,23 @@ function Taplytics() as Object
   '  1. Client Config (GET) -     _getClientConfig
   '  2. Client Events (POST) -    _clientEvents
   '  3. Client App User (POST) -  _clientAppUser
-  '  4. Reset AppUser (POST) -    _resetAppUser
+  '  4. Reset App User (POST) -   _resetAppUser
 
   prototype._getClientConfig = function(queryParameters as Object)
 
-    optionalParamaters = {}
-    requiredParamaters = {}
+    optionalParameters = {}
+    requiredParameters = {}
 
     'os - device operating system
-    requiredParamaters.os = m._sessionProperties.viewer_os_family
+    requiredParameters.os = m._sessionProperties.viewer_os_family
 
     'osv - device operating system version
-    requiredParamaters.osv = m._sessionProperties.viewer_os_version
+    requiredParameters.osv = m._sessionProperties.viewer_os_version
 
     'dn - device name (optional)
     if queryParameters.DoesExist("dn")
       if queryParameters.dn <> invalid
-        optionalParamaters.dn = queryParameters.dn
+        optionalParameters.dn = queryParameters.dn
       end if
     end if
 
@@ -236,77 +267,98 @@ function Taplytics() as Object
     'lv - live update mode / 1/0
     'dev - live update manually set (from starting options) / 1/0
     if m._sessionProperties.is_dev
-      requiredParamaters.rm = 1
-      requiredParamaters.lv = 1
-      requiredParamaters.dev = 1
+      requiredParameters.rm = 1
+      requiredParameters.lv = 1
+      requiredParameters.dev = 1
     else
-      requiredParamaters.rm = 3
-      requiredParamaters.lv = 0
-      requiredParamaters.dev = 0
+      requiredParameters.rm = 3
+      requiredParameters.lv = 0
+      requiredParameters.dev = 0
     end if
 
     'ma - manufacturer (optional)
     if queryParameters.DoesExist("ma") and queryParameters.ma <> ""
-       optionalParamaters.ma = queryParameters.ma
+       optionalParameters.ma = queryParameters.ma
     end if
 
     'br - brand (optional)
     if queryParameters.DoesExist("br") and queryParameters.br <> ""
-      optionalParamaters.br = queryParameters.br
+      optionalParameters.br = queryParameters.br
     end if
 
     'd - device type
-    requiredParamaters.d = m._sessionProperties.player_model_number
+    requiredParameters.d = m._sessionProperties.player_model_number
 
     'sdk - version of the sdk
-    requiredParamaters.sdk = m._sessionProperties.player_tap_plugin_version
+    requiredParameters.sdk = m._sessionProperties.player_tap_plugin_version
 
     'av - version of the app
-    requiredParamaters.av = m._sessionProperties.application_version
+    requiredParameters.av = m._sessionProperties.application_version
 
     'ad - device adID identifier
-    requiredParamaters.ad = m._sessionProperties.player_unique_id
+    requiredParameters.ad = m._sessionProperties.player_unique_id
 
     'an - name of the app (optional but recommended)
-    requiredParamaters.an = m._sessionProperties.player_tap_plugin_name
+    requiredParameters.an = m._sessionProperties.player_tap_plugin_name
 
     'ab - build version (optional)
     if queryParameters.DoesExist("ab") and queryParameters.ab <> ""
-      optionalParamaters.ab = queryParameters.ab
+      optionalParameters.ab = queryParameters.ab
     end if
 
     't - Taplytics API Key
-    requiredParamaters.t = m.KEY
+    requiredParameters.t = m.KEY
 
     'ai - identifier of the app (optional)
+    optionalParameters.ai = m._sessionProperties.player_tap_plugin_name
+
     'alg - language of the app (optional but recommended) ● en
-    optionalParamaters.alg = m._sessionProperties.player_language_code
+    optionalParameters.alg = m._sessionProperties.player_language_code
 
     'alg3 - ISO3 language of the app (optional but recommended) ● eng
     'plg - preferred language (optional but recommended) ● en
     'con - country (optional but recommended) ● ca
-    optionalParamaters.con = m._sessionProperties.player_country_code
+    optionalParameters.con = m._sessionProperties.player_country_code
 
     'con3 - country in ISO3 format (optional but recommended) ● USA
     'tzn - time zone name (optional but recommended) ● Pacific Daylight Time
-    optionalParamaters.tzn = m._sessionProperties.player_time_zone
+    optionalParameters.tzn = m._sessionProperties.player_time_zone
 
     'tz - time zone abbreviation (optional but recommended) ● EDT
     'tzs - time zone seconds from GMT (optional but recommended) ● 0  integer number
     'sw - screen width (optional) ● 1920
-    optionalParamaters.sw = m._sessionProperties.player_width
+    optionalParameters.sw = m._sessionProperties.player_width
 
     'sh - screen height (optional) ● 1080
-    optionalParamaters.sw = m._sessionProperties.player_height
+    optionalParameters.sw = m._sessionProperties.player_height
 
     'n - network type (optional) ● WiFi  or  WWAN
-    optionalParamaters.n = m._sessionProperties.player_connection_type
+    optionalParameters.n = m._sessionProperties.player_connection_type
 
     'exp - list of experiment_ids (optional) ● JSON array of experiment_ids
     'var - list of variation_ids (optional)
     'uid - AppUser user_id (optional)
+    optionalParameters.uid = m._sessionProperties.viewer_user_id
+
     'aua - AppUser attribute changes to set. (optional)
+    optionalParameters.aua = {}
+    optionalParameters.aua.SetModeCaseSensitive()
+    optionalParameters.aua.addReplace("user_id", m._sessionProperties.viewer_user_id)
+
+    if queryParameters.DoesExist("customData") and queryParameters.customData <> invalid
+      print "[Taplytics priv] _getClientConfig customData: ", queryParameters.customData
+      optionalParameters.aua.addReplace("customData", queryParameters.customData)
+    end if
+
+    optionalParameters.aua = FormatJSON(optionalParameters.aua)
+
     'uev - User test experiment/variations set in startTaplytics options (optional)
+    if m._global.forcedTaplyticsConfig <> invalid
+      optionalParameters.uev = m._global.forcedTaplyticsConfig
+      print "[Taplytics priv] _getClientConfig ForcedTaplyticsConfig: ", optionalParameters.uev
+      optionalParameters.uev = FormatJSON(optionalParameters.uev)
+    end if
+
 
     timeout = m.HTTP_TIMEOUT
     if queryParameters.DoesExist("timeout")
@@ -321,21 +373,21 @@ function Taplytics() as Object
         response: {}
     })
     context.observeField("response", m.httpPort)
-    requiredParamaters.Append(optionalParamaters)
-    m._makeRequest(m.DEFAULT_URL, api, method, name, context, requiredParamaters, {}, timeout)
+    requiredParameters.Append(optionalParameters)
+    m._makeRequest(m.DEFAULT_URL, api, method, name, context, requiredParameters, {}, timeout)
 
   end function
 
   prototype._postClientAppUser = function(queryParameters as Object)
 
-    optionalParamaters = {}
-    requiredParamaters = {}
+    optionalParameters = {}
+    requiredParameters = {}
 
-    requiredParamaters.t = m.KEY
-    requiredParamaters.pid = m._variables._project
-    requiredParamaters.sid = m._variables.sid
-    requiredParamaters.auid = m._variables.au_id
-    requiredParamaters.k = "a4cbf0842807b43a0000"
+    requiredParameters.t = m.KEY
+    requiredParameters.pid = m._clientConfig.projectInfo._id  'm._variables._project
+    requiredParameters.sid = m._clientConfig.sid  'm._variables.sid
+    requiredParameters.auid = m._clientConfig.au._id  'm._variables.au_id
+    requiredParameters.k = "a4cbf0842807b43a0000"
 
     au = {}
     if queryParameters.DoesExist("user_id") and queryParameters.user_id <> ""
@@ -369,7 +421,7 @@ function Taplytics() as Object
     if queryParameters.DoesExist("avatarUrl") and queryParameters.avatarUrl <> ""
       au.avatarUrl = queryParameters.avatarUrl
     end if
-    requiredParamaters.au = au
+    requiredParameters.au = au
 
     api = "/v1/clientAppUser/"
     method = "POST"
@@ -379,8 +431,8 @@ function Taplytics() as Object
         response: {}
     })
     context.observeField("response", m.httpPort)
-    requiredParamaters.Append(optionalParamaters)
-    m._makeRequest(m.DEFAULT_URL, api, method, name, context, {}, requiredParamaters)
+    requiredParameters.Append(optionalParameters)
+    m._makeRequest(m.DEFAULT_URL, api, method, name, context, {}, requiredParameters)
 
   end function
 
@@ -397,19 +449,19 @@ function Taplytics() as Object
     '   prod - is prod, not live update (Boolean)
     '   sid - session_id (String)
 
-    requiredParamaters = {}
+    requiredParameters = {}
 
-    requiredParamaters.t = m.KEY
-    requiredParamaters.sid = m._clientConfig.sid
+    requiredParameters.t = m.KEY
+    requiredParameters.sid = m._clientConfig.sid
 
     'create array
     e = []
 
     'create event
     event = {}
-    
+
     event.type = eventType
-    print "event type: ", event.type
+    print "[Taplytics priv] event type: ", event.type
 
     if queryParameters.DoesExist("eventName") and queryParameters.eventName <> ""
       event.gn = queryParameters.eventName
@@ -417,7 +469,7 @@ function Taplytics() as Object
 
     date = CreateObject("roDateTime")
     event.date = date.ToISOString()
-    print "event date : ", event.date
+    print "[Taplytics priv] event date : ", event.date
 
     if queryParameters.DoesExist("eventValue")
       event.val = queryParameters.eventValue
@@ -434,7 +486,7 @@ function Taplytics() as Object
 
     'create array of only 1 event
     e.push(event)
-    requiredParamaters.e = e
+    requiredParameters.e = e
 
     api = "/v1/clientEvents/"
     method = "POST"
@@ -444,7 +496,7 @@ function Taplytics() as Object
         response: {}
     })
     context.observeField("response", m.httpPort)
-    m._makeRequest(m.DEFAULT_PING_URL, api, method, name, context, {}, requiredParamaters)
+    m._makeRequest(m.DEFAULT_PING_URL, api, method, name, context, {}, requiredParameters)
 
   end function
 
@@ -455,12 +507,12 @@ function Taplytics() as Object
     '   auid - AppUser ID
     '   ad - device adID identifier
 
-    requiredParamaters = {}
+    requiredParameters = {}
 
-    requiredParamaters.t = m.KEY
-    requiredParamaters.sid = m._variables.sid
-    requiredParamaters.auid = m._variables.au_id
-    requiredParamaters.ad = m._sessionProperties.player_unique_id
+    requiredParameters.t = m.KEY
+    requiredParameters.sid = m._clientConfig.sid   '_variables.sid
+    requiredParameters.auid = m._clientConfig.au._id  '_variables.au_id
+    requiredParameters.ad = m._sessionProperties.player_unique_id
 
     api = "/v1/resetAppUser/"
     method = "POST"
@@ -470,7 +522,7 @@ function Taplytics() as Object
         response: {}
     })
     context.observeField("response", m.httpPort)
-    m._makeRequest(m.DEFAULT_URL, api, method, name, context, {}, requiredParamaters)
+    m._makeRequest(m.DEFAULT_URL, api, method, name, context, {}, requiredParameters)
   end function
 
 
@@ -482,34 +534,66 @@ function Taplytics() as Object
   ' ' //////////////////////////////////////////////////////////////
 
   prototype._onGetClientConfig = function(msg as Object)
-    if m._top.enablePrint then print "ENTER _onGetClientConfig>>>"
-    if m._top.enablePrint then print msg
-    if msg.code = 200
+    if m._top.enablePrint then print "[Taplytics priv] ENTER _onGetClientConfig>>>"
+    if m._top.enablePrint then print "[Taplytics priv] msg:", msg
+
+    m._taplyticsActive = false
+
+    content = invalid
+
+    code = msg.code
+
+    if code = 200
       content = msg.content
+      m._regWrite("TaplyticsData", content)
+      if m._top.enablePrint then print "[Taplytics priv] Good config load, saving for cache"
+      m._taplyticsActive = true
+    else
+      priorTaplyticsData = m._regRead("TaplyticsData")
+      if isStrNotEmpty(priorTaplyticsData)
+        print "[Taplytics priv] Using prior stored config data, response was: ", code
+        content = priorTaplyticsData
+      end if
+    end if
+
+    if content <> invalid and content <> ""
       m._clientConfig = ParseJSON(content)
-      m._recurseOnClientConfig(m._clientConfig, "")
-      m._top.clientConfig = m._variables
-      if m._top.enablePrint then print m._variables
+      m._top.clientConfig = m._clientConfig
+
+      m._variables = m._clientConfig["dynamicVars"]
+      m._experiments = m._clientConfig["experiments"]
+      m._expN = m._clientConfig["expN"]
+      m._features = m._clientConfig["ff"]
+
+      if m._top.enablePrint then print "[Taplytics priv] variables", FormatJSON(m._variables)
+      if m._top.enablePrint then print "[Taplytics priv] experiments", FormatJSON(m._experiments)
+      if m._top.enablePrint then print "[Taplytics priv] expN", FormatJSON(m._expN)
+      if m._top.enablePrint then print "[Taplytics priv] features", FormatJSON(m._features)
+
       m._clientConfigReady = true
+    else
+      m._clientConfig = invalid
+      m._top.clientConfig = invalid
+    end if
 
+    if m._taplyticsActive = true
       m._postClientEvents("appActive", {})
-
     end if
   end function
 
   prototype._onPostClientAppUser = function(msg as Object)
-    if m._top.enablePrint then print "ENTER _onPostClientAppUser>>>"
-    if m._top.enablePrint then print msg
+    if m._top.enablePrint then print "[Taplytics priv] ENTER _onPostClientAppUser>>>"
+    if m._top.enablePrint then print "[Taplytics priv] msg:", msg
   end function
 
   prototype._onPostClientEvents = function(msg as Object)
-    if m._top.enablePrint then print "ENTER _onPostClientEvents>>>"
-    if m._top.enablePrint then print msg
+    if m._top.enablePrint then print "[Taplytics priv] ENTER _onPostClientEvents>>>"
+    if m._top.enablePrint then print "[Taplytics priv] msg:", msg
   end function
 
   prototype._onPostResetAppUser = function(msg as Object)
-    if m._top.enablePrint then print "ENTER _onPostResetAppUser>>>"
-    if m._top.enablePrint then print msg
+    if m._top.enablePrint then print "[Taplytics priv] ENTER _onPostResetAppUser>>>"
+    if m._top.enablePrint then print "[Taplytics priv] msg:", msg
   end function
 
 
@@ -518,12 +602,12 @@ function Taplytics() as Object
   ' ' //////////////////////////////////////////////////////////////
 
   prototype._makeRequest = function(host as String, api as String, method as String, name as String, context as Object, parameters = {} as Object, payload = {} as Object, timeout = -1 as Integer)
-        if m._top.enablePrint then print "ENTER _makeRequest"
+        if m._top.enablePrint then print "[Taplytics priv] ENTER _makeRequest"
 
-        retryCountdown% = m.HTTP_RETRIES
+        retryCountdown = m.HTTP_RETRIES
 
         if timeout = -1 then timeout = m.HTTP_TIMEOUT
-        if m._top.enablePrint then print "use timeout ", stri(timeout)
+        if m._top.enablePrint then print "[Taplytics priv] use timeout ", timeout
 
         m.connection.AsyncCancel()
 
@@ -551,55 +635,46 @@ function Taplytics() as Object
         if payload <> invalid then requestBody = FormatJson(payload)
 
         'se method
-        if method = "POST" then m.connection.SetRequest("POST")
+        if method = "POST" then
+          m.connection.SetRequest("POST")
+        else
+          m.connection.SetRequest("GET")
+        end if
 
-        if m._top.enablePrint then print "send url : [" + url + "]"
-        if m._top.enablePrint then print "send body : " + requestBody
+        if m._top.enablePrint then print "[Taplytics priv] send url : [" + url + "]"
+        if m._top.enablePrint then print "[Taplytics priv] send body : " + requestBody
+        if m._top.enablePrint then print "[Taplytics priv] method : " + m.connection.getRequest()
 
-        while retryCountdown% > 0
+        while retryCountdown > 0
           if method = "POST"
-             m.connection.AsyncPostFromString(requestBody)
+            m.connection.AsyncPostFromString(requestBody)
           else
             m.connection.AsyncGetToString()
           end if
+
           event = wait(timeout, m.httpPort)
           if type(event) = "roUrlEvent"
-            print "[tap-analytics] Request success"
+            if m._top.enablePrint then print "[Taplytics priv] Request success"
             context.response = {name: name, code: event.getResponseCode(), content: event.getString()}
             exit while
           else if event = invalid
-            print "[tap-analytics] Request timeout event occurs. Reset connection"
+            print "[Taplytics priv] Request timeout event occurs. Reset connection"
             m.connection.AsyncCancel()
             ' reset the connection after a timeout
             m.connection = _createConnection(m.httpPort)
+          else if type(event) = "roSGNodeEvent"
+            print "[Taplytics priv] roSGNodeEvent Node:", event.getNode()
+            print "[Taplytics priv] roSGNodeEvent Info:", event.getInfo()
+            print "[Taplytics priv] roSGNodeEvent Data:", event.getData()
+            m.addNodeEvent(event)
           else
-            print "[tap-analytics] Request unknown port event"
+            print "[Taplytics priv] Request unknown port event type:" + type(event)
+            print "[Taplytics priv] roSGNodeEvent Node: ", event
           end if
 
           'log_error([m.className, " invalid uri: ", uri])
-          retryCountdown% = retryCountdown% - 1
+          retryCountdown = retryCountdown - 1
         end while
-  end function
-
-  prototype._recurseOnClientConfig = function(Node as Object, ParentKeyName as String)
-    for each key in Node
-      if type(Node[key]) = "roAssociativeArray"
-        if m._top.enablePrint then print "key container [",key, "] value [",Node[key],"]"
-        if key = "dynamicVars"
-          dynamicVars = Node[key]
-          for each dynamicVar in dynamicVars
-            if m._top.enablePrint then print "key [",dynamicVars[dynamicVar].name, "] value [",dynamicVars[dynamicVar].value,"]"
-            m._variables.AddReplace(dynamicVars[dynamicVar].name, dynamicVars[dynamicVar].value)
-          end for
-        else
-          m._recurseOnClientConfig(Node[key], ParentKeyName + key)
-        end if
-      else
-        if m._top.enablePrint then print "key [",key, "] value [",Node[key],"]"
-        sKey = key.trim()
-        m._variables.AddReplace(ParentKeyName + sKey, Node[key])
-      end if
-    end for
   end function
 
   ' called once per application session'
@@ -608,19 +683,24 @@ function Taplytics() as Object
     deviceInfo = m._getDeviceInfo()
     appInfo = m._getAppInfo()
 
+    version = deviceInfo.GetOSVersion()
+    versionStr = version.major + "." + version.minor
+
     ' HARDCODED
     props.player_sequence_number = 1
     props.player_software_name = m.PLAYER_SOFTWARE_NAME
-    props.player_software_version = Mid(deviceInfo.GetVersion(), 3, 4)
+    props.player_software_version = versionStr
     props.player_model_number = deviceInfo.GetModel()
     props.player_tap_plugin_name = appInfo.GetTitle()
     props.is_dev = appInfo.IsDev()
-    props.player_unique_id = deviceInfo.GetChannelClientId()
+    ' Override is_dev to true if there are forced Taplytics config options, otherwise the uev parameter will not have effect
+    if m._global.forcedTaplyticsConfig <> invalid then props.is_dev = true
+    props.player_unique_id = deviceInfo.getChannelClientId()
     props.viewer_application_name = "Roku"
-    props.viewer_application_version = Mid(deviceInfo.GetVersion(), 3, 4)
+    props.viewer_application_version = versionStr
     props.viewer_device_name = "Roku"
     props.viewer_os_family = "Roku"
-    props.viewer_os_version = Mid(deviceInfo.GetVersion(), 3, 4)
+    props.viewer_os_version = versionStr
     props.tap_api_version = m.TAP_API_VERSION
     props.application_version = appInfo.GetVersion()
     props.player_tap_plugin_version = m.TAP_SDK_VERSION
@@ -634,11 +714,22 @@ function Taplytics() as Object
     props.player_is_fullscreen = m.PLAYER_IS_FULLSCREEN
 
     ' DEVICE INFO
-    if deviceInfo.IsRIDADisabled() = true
-      props.viewer_user_id = deviceInfo.GetChannelClientId()
+
+    props.viewer_user_id = m._global.taplyticsId
+    if props.viewer_user_id = invalid or props.viewer_user_id = ""
+      if deviceInfo.IsRIDADisabled() = true
+        props.viewer_user_id = deviceInfo.GetChannelClientId()
+        if m._top.enablePrint print "[Taplytics priv] getSessionProperties: Using ClientId for Taplytics id: ", props.viewer_user_id
+      else
+        props.viewer_user_id = deviceInfo.GetRIDA()
+        if m._top.enablePrint print "[Taplytics priv] getSessionProperties: Using RIDA for Taplytics id: ",props.viewer_user_id
+      end if
     else
-      props.viewer_user_id = deviceInfo.GetRIDA()
+      if m._top.enablePrint print "[Taplytics priv] getSessionProperties: Using global Taplytics id: ", props.viewer_user_id
     end if
+
+    if m._top.enablePrint then print "[Taplytics priv] getSessionProperties: session props:", props
+
     return props
   end function
 
@@ -689,6 +780,25 @@ function Taplytics() as Object
 
   prototype._getDateTime = function() as Object
     return CreateObject("roDateTime")
+  end function
+
+  prototype._regWrite = function(key as String, val as String) as Boolean
+    sec = m._getRegistrySection()
+    sec.Write(key, val)
+    return sec.Flush()
+  end function
+
+  prototype._regRead = function(key as String) as String
+    sec = m._getRegistrySection()
+    if sec = invalid then return ""
+
+    if sec.Exists(key) then return sec.Read(key)
+    return ""
+  end function
+
+  prototype._getRegistrySection = function() as Object
+    sec = CreateObject("roRegistrySection", "Taplytics")
+    return sec
   end function
 
   return prototype
