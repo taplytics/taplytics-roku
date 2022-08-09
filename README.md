@@ -7,6 +7,7 @@ An SDK for A/B Testing, Analytics, and Feature Flags on Roku Channels
 | [Installation & Initialization](#installation)|      
 | [Experiment Information](#running-experiment-information)     |
 | [Dynamic Variables](#dynamic-variables)         |
+| [Feature Flags](#feature-flags)         |
 | [User Attributes](#setting-user-attributes)      |
 | [Analytics](#analytics-events)|
 | [Sessions](#sessions)|
@@ -109,6 +110,40 @@ The `name` parameter is the name of the variable set up in the dashboard
 The `default` parameter is what the method will return if the user is not in an experiment containing the variable, or something goes wrong with the request.
 
 
+## Feature Flags
+
+### Running Feature Flags
+
+If you would like to see which feature flags are running on a given device, there exists a `getRunningFeatureFlags` function which provides an array of the currently running feature flags. An example:
+
+```brightscript
+runningFeatureFlags = m.TaplyticsAPI.callFunc("getRunningFeatureFlags")
+print "Running Feature Flags: ", runningFeatureFlags
+```
+
+Output:
+
+```
+[
+    {
+        "_id": "featureFlagId"
+        "enabled": true,
+        "key": "featureFlagKey",
+        "status": "active",
+        "variable": "Foo"
+    }
+]
+```
+
+### Return if Feature Flag Enabled
+
+If you would like to see if a feature flag is currently enanbled for the device, there exists a `getFeatureFlagEnabled` function returns a boolean value to indicate whether or not the feature flag is active AND enabled. If the flag is not active OR not enabled, it will return the default value. An example:
+
+```brightscript
+isFeatureFlagKeyEnabled = m.TaplyticsAPI.callFunc("getFeatureFlagEnabled", { key: "featureFlagKey", default: false })
+print "Feature Flag isFeatureFlagKey Enabled?: ", isFeatureFlagKeyEnabled
+```
+
 ## Setting User Attributes
 
 It's possible to send custom user attributes to Taplytics using a JSONObject of user info. These attributes can be used to identify users as well as segment users into experiments on the Taplytics dashboard.
@@ -121,10 +156,10 @@ m.TaplyticsAPI.callFunc("setUserAttributes", {firstName: "YourNewName", user_id:
 
 ### Resetting user attributes or Logging out a user
 
-Once a user logs out of your app, their User Attributes are no longer valid. You can reset their data by calling resetAppUser. This will get a new config for the user with updated experiment and variation data.
+Once a user logs out of your app, their User Attributes are no longer valid. You can reset their data by calling resetUser. This will get a new config for the user with updated experiment and variation data.
 
 ```
-m.TaplyticsAPI.callFunc("resetAppUser")
+m.TaplyticsAPI.callFunc("resetUser")
 ```
 
 ## Analytics Events
