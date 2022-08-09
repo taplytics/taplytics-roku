@@ -107,7 +107,7 @@ function getRunningFeatureFlags() as Object
 end function
 
 function getFeatureFlags(status = "all") as object
-  if m.top.enablePrint then print "[taplytics] ENTER getFeatures>>>"
+  if m.top.enablePrint then print "[Taplytics] ENTER getFeatures>>>"
   response = []
 
   if m._clientConfigReady
@@ -120,7 +120,7 @@ function getFeatureFlags(status = "all") as object
             variable: featureKey
           }
           temp.append(feature)
-          if m.top.enablePrint then print "[taplytics] feature variable: ", temp.name
+          if m.top.enablePrint then print "[Taplytics] feature variable: ", temp.name
           response.push(temp)
         end if
       end for
@@ -162,7 +162,7 @@ end function
 '*******************************************************************************
 function resetUser() as Object
   if m.top.enablePrint then print "[Taplytics] ENTER resetUser>>>"
-  m.TaplyticsPrivateAPI.resetUser = true
+  m.TaplyticsPrivateAPI.resetAppUser = true
 end function
 
 '*******************************************************************************

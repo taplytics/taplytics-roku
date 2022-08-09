@@ -1,5 +1,5 @@
 function init()
-  m.TAP_SDK_VERSION = "1.2.0"
+  m.TAP_SDK_VERSION = "1.3.1"
   m.top.id = "tap"
 
   m.messagePort = _createPort()
@@ -7,7 +7,7 @@ function init()
   m.top.observeField("startTaplytics", m.messagePort)
   m.top.observeField("setUserAttributes", m.messagePort)
   m.top.observeField("logEvent", m.messagePort)
-  m.top.observeField("resetUser", m.messagePort)
+  m.top.observeField("resetAppUser", m.messagePort)
 
   m.taplytics = Taplytics()
   m.top.functionName = "runLoop"
@@ -106,7 +106,7 @@ end function
 function Taplytics() as Object
   prototype = {}
 
-  prototype.TAP_SDK_VERSION = "1.3.0"
+  prototype.TAP_SDK_VERSION = "1.3.1"
   prototype.PLAYER_SOFTWARE_NAME = "RokuSG"
   prototype.TAP_API_VERSION = "2.0"
   prototype.PLAYER_IS_FULLSCREEN = "true"
